@@ -1,10 +1,15 @@
 {
-  "name": "PFInterface",
+  "name": "pfint",
   "author": "Chris Roberts <chris@naxxfish.eu>",
   "version": "0.0.1",
-  "description": "A module which allows one to interface with PathfinderPC Server (www.pathfinderpc.com)",
-  "homepage": "http://github.com/naxxfish/pfinterface",
+  "description": "A module which allows Node.js to interface with PathfinderPC Server (www.pathfinderpc.com)",
+  "homepage": "http://github.com/naxxfish/pfint",
+  "main": "index.js",	
   "dependencies": {
     "nedb": "~0.10.4"
+  },
+  "repository": {
+   "type": "git",
+   "url": "http://github.com/naxxfish/pfint.git
   }
 }
