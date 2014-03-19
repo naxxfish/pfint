@@ -88,3 +88,8 @@ Raised when an error occurs (no, really?)
 #### gpi (state) ***DRAFT***
 Raised when a GPI state changes 
 
+### Credits
+So far, all done by me (Chris)
+
+Like it? Send me some Bitcoins? 1GTw3bJ5UB7g2upzzvXarJ9VZX3gREdpgG
+
