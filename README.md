@@ -1,15 +1,17 @@
-pfint
+PathfinderPC Server Interface
 =====
 
 PathfinderPC Interface for Node.js
 
 This package allows you to interact with [PathfinderPC Server](www.pathfinderpc.com).  
 
+It keeps an in-memory database ([nedb](https://github.com/louischatriot/nedb)) to keep track of the state - so don't feel bad about querying it lots, it won't hit Pathfinder.  
+
 ### Installation
 
 Do this to get it into your node project:
 
-   npm install pfint --save
+    npm install pfint --save
 
 ### Usage
 
@@ -24,7 +26,7 @@ Require it, create a new one.
 		'port' : 9500
 	})
 
-PFInt gives off lots of events and things.  It can also be synchronously queried.  
+PFInt gives off lots of events and things.  It can also be queried.  
 
 ### Methods
 There are a coupe of methods you can use 
