@@ -92,4 +92,4 @@ Raised when a GPI state changes
 So far, all done by me (Chris)
 
 Like it? Send me some Bitcoins? 1GTw3bJ5UB7g2upzzvXarJ9VZX3gREdpgG
-
+![1GTw3bJ5UB7g2upzzvXarJ9VZX3gREdpgG](http://naxxfish.files.wordpress.com/2014/02/desktop_wallet_code.png)
