@@ -18,6 +18,8 @@
  
 // basic imports
 var events = require('events');
+var debug = require('debug')('pathfinder-pfinterface')
+
 
 module.exports = PFInt;
 
@@ -193,6 +195,7 @@ PFInt.prototype.parseLines = function (self, lines)
 				
 				if (firstLine.indexOf("MemorySlot") >= 0)
 				{
+					debug('memoryslot')
 					lines.push(firstLine)
 					lines.forEach(function (line)
 					{
@@ -212,6 +215,7 @@ PFInt.prototype.parseLines = function (self, lines)
 								'name' : parts[1],
 								'value' : parts[2]
 								}
+								debug(slot);
 							state.update(
 								{'itemType' : 'memoryslot',
 								'number' : parts[0]
@@ -225,9 +229,45 @@ PFInt.prototype.parseLines = function (self, lines)
 					resync(state, client)
 					return
 				}
+				if (firstLine.indexOf("RouteStat") >= 0)
+				{
+					debug('routestat')
+					lines.forEach(function (line)
+					{
+						if (line.indexOf(">>") == 0)
+						{	return }
+						//
+						if (line.length < 2) {
+							return
+						}
+						def = line.substring(line.indexOf(" ")+1)
+						parts = def.split('\t');
+						if (parts[1] != "")
+						{
+							var slot = {
+								'itemType' : 'route',
+								'source' : parts[1],
+								'destination' : parts[2],
+								'locked' : parts[3]
+								}
+								debug(slot)
+							state.update(
+								{'itemType' : 'memoryslot',
+								'number' : parts[0]
+								},
+								slot,
+									{'upsert' : true}
+								)
+							self.emit('memorySlot', slot)
+						}
+					});
+					resync(state, client)
+					return					
+				}
 				
 				if (firstLine.indexOf("GPIStat") >= 0)
 				{
+					debug('gpistat')
 					lines.push(firstLine)
 					lines.forEach( function (line) {
 						if (line.indexOf(">>") == 0)
@@ -245,6 +285,7 @@ PFInt.prototype.parseLines = function (self, lines)
 							'destinationid' : parts[2],
 							'state' : parts[3]
 							}
+							debug(gpi)
 						state.update({
 							'itemType' : 'gpi', 
 							'router' : parts[1],
@@ -257,6 +298,7 @@ PFInt.prototype.parseLines = function (self, lines)
 				
 				if (firstLine.indexOf("Subscribed") >= 0)
 				{
+					debug('subscribed')
 					subscribed = true
 					self.emit('subscribed', firstLine)
 					resync(state, client)
@@ -369,7 +411,7 @@ function parseRouter(router)
 	// Add to the resync list
 	commandQueue.push("GetList SourceDetails " + router['id'])
 	commandQueue.push("GetList DestinationDetails " + router['id'])
-	commandQueue.push("GetList RouteStats "+ router['id'])
+	//commandQueue.push("GetList RouteStats "+ router['id'])
 	//commandQueue.push("GPIStat " + router['id'])
 	//commandQueue.push("GPOStat " + router['id'])
 	return router
