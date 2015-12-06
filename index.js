@@ -250,6 +250,7 @@ PFInt.prototype.parseLines = function (self, lines)
 						}
 						def = line.substring(line.indexOf(" ")+1)
 						parts = def.split('\t');
+						debug(parts)
 						if (parts[1] != "")
 						{
 							var slot = {
@@ -260,8 +261,8 @@ PFInt.prototype.parseLines = function (self, lines)
 								}
 								debug(slot)
 							state.update(
-								{'itemType' : 'memoryslot',
-								'number' : parts[0]
+								{'itemType' : 'route',
+								'destination': parts[2]
 								},
 								slot,
 									{'upsert' : true}
