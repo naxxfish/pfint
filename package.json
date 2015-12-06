@@ -1,7 +1,7 @@
 {
   "name": "pfint",
   "author": "Chris Roberts <chris@naxxfish.eu>",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "A module which allows Node.js to interface with PathfinderPC Server (www.pathfinderpc.com)",
   "homepage": "http://github.com/naxxfish/pfint",
   "main": "index.js",	
