@@ -62,9 +62,11 @@ PFInt.prototype.findOne = function find(query, cb)
 	state.findOne(query,cb)
 	return self
 }
+
 var linesToParse = []
 PFInt.prototype.sync = function sync(config)
 {
+	debug("sync");
 	var self = this;
 	self.config = config
 	var net = require('net');
@@ -77,9 +79,10 @@ PFInt.prototype.sync = function sync(config)
 			'port' : config['port']
 			} }, {'upsert' : true }
 	)
+
 	self.client = net.connect({host: config['host'], port: config['port']},
 		function() { //'connect' listener
-			self.emit('debug','Connected')
+			debug('Connected')
 			self.emit('connected')
 			self.client.write("Login " + config['user'] + " " + config['password'] + "\r\n");
 			state.update(
@@ -103,23 +106,28 @@ PFInt.prototype.sync = function sync(config)
 					}
 				})
 			});
-	}
+	})
 	
-	);
-
+	self.client.on('error', function(error) {
+		debug("Connection Error: ", error)
+		self.emit('error', error)
+		setTimeout(function() { exports.sync(config, state) }, 10000);
+	})
+	
 	self.client.on('end', function() {
-		self.emit('debug','Disconnected');
+		debug('Disconnected');
 		state.update(
 					{'itemType' : 'pathfinderserver'},
 					{ $set : {'connected' : false, 'loggedIn' : false} }, {'upsert' : true }
 		)
 		self.emit('disconnected')
-	});
-	self.client.on('error', function(error) {
-		self.emit('error', error)
-		self.emit('debug',"Connection Error: " + error)
-		setTimeout(function() { exports.sync(config, state) }, 10000);
+		debug('reconnecting in 10 seconds')
+		setTimeout(10000, function ()
+		{
+			stompClient.connect();
+		});
 	})
+
 	return self
 }
 
@@ -138,7 +146,7 @@ PFInt.prototype.parseLines = function (self, lines)
 				{
 					if (firstLine.indexOf("Successful") > 0)
 					{
-						self.emit('debug',"PF Login succeeded!")
+						debug("PF Login succeeded!")
 						state['connected'] = true
 						state.update(
 							{'itemType' : 'pathfinderserver'},
@@ -153,7 +161,7 @@ PFInt.prototype.parseLines = function (self, lines)
 						resync(state, client);
 						return
 					} else {
-						self.emit('debug',"PF Login failed")
+						debug("PF Login failed")
 						state['connected'] = false
 						client.end();
 						// retry
@@ -166,7 +174,7 @@ PFInt.prototype.parseLines = function (self, lines)
 
 				if (firstLine.indexOf("Error") >= 0)
 				{
-					self.emit('debug',"PF Error" + firstLine)
+					debug("PF Error" + firstLine)
 					resync(state, client);
 				}
 				
@@ -181,7 +189,7 @@ PFInt.prototype.parseLines = function (self, lines)
 				
 				if (firstLine.indexOf("Begin User Command") >= 0)
 				{
-					self.emit('debug', "User command")
+					debug("User command")
 					// a custom protocol translator command has been fired!
 					lines.forEach(function (line)
 					{
@@ -368,7 +376,7 @@ PFInt.prototype.parseList = function parseList(firstLine, lines, state, client)
 				{$set : entry}, 
 				{'upsert' : true }
 			)
-			self.emit('router', entry)
+			self.emit('route', entry)
 		} else if (list.indexOf("protocoltranslators") == 0)
 		{
 			entry = parseProtocolTranslator(entry)
