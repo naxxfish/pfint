@@ -59,8 +59,34 @@ PFInt.prototype.find = function find(query, cb)
 PFInt.prototype.findOne = function find(query, cb)
 {
 	var self = this;
+	debug(query);
 	state.findOne(query,cb)
 	return self
+}
+
+PFInt.prototype.setMemorySlot = function setMemorySlot(memorySlot, memorySlotValue, cb)
+{
+	var self = this;
+	if (self.connected)
+	{
+		debug({'action':'set','memorySlot':memorySlot,'memorySlotValue':memorySlotValue})
+		debug("SetMemorySlot " + memorySlot + "=" + memorySlotValue + "\r\n");
+		self.client.write("SetMemorySlot " + memorySlot + "=" + memorySlotValue + "\r\n");
+		/*
+			At this point, we've sent the command to Pathfinder to set the memory slot.  
+			Shortly, it'll come back with the confirmation that that MemorySlot has been set - so we subscribe to our
+			own event listener and wait until we see the memory slot get updated.  
+		*/
+		var updateEvent = function (slot) 
+		{
+			if (slot.name == memorySlot)
+			{
+				self.removeListener('memorySlot',updateEvent);
+				self.findOne({'itemType' : 'memoryslot','name':memorySlot},cb)
+			}
+		}
+		self.on('memorySlot',updateEvent);
+	}
 }
 
 var linesToParse = []
@@ -79,7 +105,7 @@ PFInt.prototype.sync = function sync(config)
 			'port' : config['port']
 			} }, {'upsert' : true }
 	)
-
+	self.connected = true;
 	self.client = net.connect({host: config['host'], port: config['port']},
 		function() { //'connect' listener
 			debug('Connected')
@@ -141,7 +167,7 @@ PFInt.prototype.parseLines = function (self, lines)
 					firstLine = lines.shift()
 				}
 				// console.log("## PF: " + data.toString())
-
+				debug({'rawPFIntLine':firstLine});
 				if (firstLine.indexOf("Login") >= 0)
 				{
 					if (firstLine.indexOf("Successful") > 0)
