@@ -1,16 +1,28 @@
 {
   "name": "pfint",
-  "author": "Chris Roberts <chris@naxxfish.eu>",
+  "author": {
+    "name": "Chris Roberts",
+    "email": "chris@naxxfish.eu",
+    "url": "http://naxxfish.eu/"
+  },
   "version": "0.0.4",
   "description": "A module which allows Node.js to interface with PathfinderPC Server (www.pathfinderpc.com)",
   "homepage": "http://github.com/naxxfish/pfint",
-  "main": "index.js",	
+  "main": "index.js",
   "dependencies": {
     "nedb": "~0.10.4"
   },
+  "devDependencies": {
+    "mocha": "^2.4.5",
+    "randomstring": "^1.1.4",
+    "should": "^8.2.2"
+  },
   "repository": {
-   "type": "git",
-   "url": "http://github.com/naxxfish/pfint.git"
+    "type": "git",
+    "url": "http://github.com/naxxfish/pfint.git"
+  },
+  "scripts": {
+    "test": "mocha test/test.js"
   },
   "license": "MIT"
 }
