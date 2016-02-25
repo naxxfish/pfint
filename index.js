@@ -20,27 +20,31 @@
 var events = require('events');
 var debug = require('debug')('pfint')
 
+// we need this which only exists in EMCA6
 if (!String.prototype.endsWith) {
-  String.prototype.endsWith = function(searchString, position) {
-      var subjectString = this.toString();
-      if (typeof position !== 'number' || !isFinite(position) || Math.floor(position) !== position || position > subjectString.length) {
-        position = subjectString.length;
-      }
-      position -= searchString.length;
-      var lastIndex = subjectString.indexOf(searchString, position);
-      return lastIndex !== -1 && lastIndex === position;
-  };
+	String.prototype.endsWith = function(searchString, position) {
+		var subjectString = this.toString();
+		if (typeof position !== 'number' || !isFinite(position) || Math.floor(position) !== position || position > subjectString.length) {
+			position = subjectString.length
+		}
+		position -= searchString.length
+		var lastIndex = subjectString.indexOf(searchString, position)
+		return lastIndex !== -1 && lastIndex === position
+	};
 }
 
 
-module.exports = PFInt;
+module.exports = PFInt
 
 function PFInt()
 {
-	events.EventEmitter.call(this);
+	var connected = false;
+	var subscribed = false
+	events.EventEmitter.call(this)
 }
 
-PFInt.super_ = events.EventEmitter;
+PFInt.super_ = events.EventEmitter
+
 PFInt.prototype = Object.create(events.EventEmitter.prototype, {
     constructor: {
         value: PFInt,
@@ -48,48 +52,55 @@ PFInt.prototype = Object.create(events.EventEmitter.prototype, {
     }
 });
 
-var commandQueue = [
-	"Version",
-	"Subscribe Memory",
-	"Subscribe Silence All",
-	"GetMemorySlot All",
-	"GetList Routers"]
+;
 	
-var subscribed = false
-
+// We initially run these commands when we connect
+var commandQueue = []
+	
 var Datastore = require('nedb')
-var state =  new Datastore();
-var events = require('events');
+var state =  new Datastore()
+var events = require('events')
 
 PFInt.prototype.find = function find(query, cb)
 {
-	var self = this;
+	var self = this
 	state.find(query,cb)
 	return self
 }
 
 PFInt.prototype.findOne = function find(query, cb)
 {
-	var self = this;
-	debug(query);
+	var self = this
+	debug(query)
 	state.findOne(query,cb)
 	return self
 }
 
 PFInt.prototype.setMemorySlot = function setMemorySlot(memorySlot, memorySlotValue, cb)
 {
-	var self = this;
+	var self = this
 	if (memorySlot === undefined || memorySlot === null || memorySlotValue === undefined || memorySlotValue === null)
 	{
-		cb('passed undefined',{'error':'memorySlot or memorySlotValue not defined'});
+		cb('passed undefined',{'error':'memorySlot or memorySlotValue not defined'})
+		return;
+	}
+	if (memorySlotValue.length > 19979)
+	{
+		cb('memory slot value too long',{'error':'memoryslot value too long'})
+		return;
+	}
+	
+	if (memorySlot.length >= 19998) // yes, you read that right, the name can actually be longer than the value. 
+	{
+		cb('memory slot name too long', {'error':'memory slot name too long'})
 		return;
 	}
 	if (self.connected)
 	{
 		// check that the memoryslot value given is actually defined... 
-		debug({'action':'set','memorySlot':memorySlot,'memorySlotValue':memorySlotValue})
-		debug("SetMemorySlot " + memorySlot + "=" + memorySlotValue + "\r\n");
-		self.client.write("SetMemorySlot " + memorySlot + "=" + memorySlotValue + "\r\n");
+		debug('setMemorySlot',{'memorySlot':memorySlot,'memorySlotValue':memorySlotValue})
+		commandQueue.push("SetMemorySlot " + memorySlot + "=" + memorySlotValue + "\r\n")
+		sendCommands(state,self.client)
 		/*
 			At this point, we've sent the command to Pathfinder to set the memory slot.  
 			Shortly, it'll come back with the confirmation that that MemorySlot has been set - so we subscribe to our
@@ -99,18 +110,18 @@ PFInt.prototype.setMemorySlot = function setMemorySlot(memorySlot, memorySlotVal
 		{
 			if (slot.name == memorySlot)
 			{
-				self.removeListener('memorySlot',updateEvent);
+				self.removeListener('memorySlot',updateEvent)
 				self.findOne({'itemType' : 'memoryslot','name':memorySlot},cb)
 			}
 		}
-		self.on('memorySlot',updateEvent);
+		self.on('memorySlot',updateEvent)
 	}
 }
 
 var linesToParse = []
 PFInt.prototype.sync = function sync(config)
 {
-	debug("sync");
+	debug("sync")
 	var self = this;
 	self.config = config
 	var net = require('net');
@@ -126,19 +137,27 @@ PFInt.prototype.sync = function sync(config)
 
 	self.client = net.connect({host: config['host'], port: config['port']},
 		function() { //'connect' listener
-			self.connected = true;
+			// when we first connect, we want to run all of these commands
+			commandQueue.push("Login " + config['user'] + " " + config['password'])
+			commandQueue.push("Version")
+			commandQueue.push("Subscribe Memory")
+			commandQueue.push("Subscribe Silence All")
+			commandQueue.push("GetMemorySlot All")
+			commandQueue.push("GetList Routers")
+			sendCommands(state,self.client)
+			setTimeout(function() { sendCommands(state,self.client) },1000) // in case the results of all the above commands create more commands to execute
+			self.connected = true
 			debug('Connected')
 			self.emit('connected')
-			self.client.write("Login " + config['user'] + " " + config['password'] + "\r\n");
 			state.update(
 						{'itemType' : 'pathfinderserver'},
 						{ $set : {'connected' : true} }, {'upsert' : true }
 			)
 			var readBuffer = "";
 			self.client.on('data', function(data) {
-				debug("From PF",data.toString())
-				readBuffer = readBuffer + data.toString();
-				debug("readBuffer",readBuffer);
+				//debug("From PF",data.toString())
+				readBuffer = readBuffer + data.toString()
+				//debug("readBuffer",readBuffer)
 				// if the message does not end with a \r\n>>, then there will be a continuation so wait for that.
 				if (!readBuffer.endsWith("\r\n>>"))
 				{
@@ -166,7 +185,9 @@ PFInt.prototype.sync = function sync(config)
 	self.client.on('error', function(error) {
 		debug("Connection Error: ", error)
 		self.emit('error', error)
-		setTimeout(function() { exports.sync(config, state) }, 10000);
+		self.connected = false
+		self.subscribed = false
+		setTimeout(function() { self.sync(config, state) }, 10000)
 	})
 	
 	self.client.on('end', function() {
@@ -175,12 +196,14 @@ PFInt.prototype.sync = function sync(config)
 					{'itemType' : 'pathfinderserver'},
 					{ $set : {'connected' : false, 'loggedIn' : false} }, {'upsert' : true }
 		)
+		self.connected = false
+		self.subscribed = false
 		self.emit('disconnected')
 		debug('reconnecting in 10 seconds')
-		setTimeout(10000, function ()
+		setTimeout(function ()
 		{
-			stompClient.connect();
-		});
+			self.sync(config,state);
+		}, 10000);
 	})
 
 	return self
@@ -192,13 +215,14 @@ PFInt.prototype.parseLines = function (self, lines)
 				client = self.client
 				firstLine = lines.shift()
 				
-				if (firstLine == ">>")
+				if (firstLine.indexOf(">>") == 0)
 				{
 					firstLine = lines.shift()
 				}
 				
 				if (firstLine.indexOf("Login") >= 0)
 				{
+					debug("login",firstLine)
 					if (firstLine.indexOf("Successful") > 0)
 					{
 						debug("PF Login succeeded!")
@@ -213,7 +237,7 @@ PFInt.prototype.parseLines = function (self, lines)
 							},
 							{'upsert' : true }
 						)
-						resync(state, client);
+						sendCommands(state, client);
 						return
 					} else {
 						debug("PF Login failed")
@@ -230,16 +254,16 @@ PFInt.prototype.parseLines = function (self, lines)
 				if (firstLine.indexOf("Error") >= 0)
 				{
 					debug("PF Error" + firstLine)
-					resync(state, client);
+					sendCommands(state, client);
 				}
 				
 				if (firstLine.indexOf("PathfinderPC Server") >= 0)
 				{
+					debug("version",firstLine)
 					state.update(
 						{'itemType' : 'pathfinderserver'},
 						{ $set : {'version' : firstLine} }, {'upsert' : true }
 					)
-					resync(state, client)
 				}
 				
 				if (firstLine.indexOf("Begin User Command") >= 0)
@@ -253,48 +277,65 @@ PFInt.prototype.parseLines = function (self, lines)
 							self.emit('customCommand', line)
 						}
 					})
-					resync(state, client)
 				}
 				
 				if (firstLine.indexOf("MemorySlot") >= 0)
 				{
-					debug('memoryslot')
-					lines.push(firstLine)
+					lines.unshift(firstLine)
 					lines.forEach(function (line)
 					{
 						if (line.indexOf(">>") == 0)
-						{	return }
-						//
-						if (line.length < 2) {
+							return 
+						
+						if (line.length < 2) 
 							return
-						}
+						
 						def = line.substring(line.indexOf(" ")+1)
 						parts = def.split('\t');
-						if (parts[1] != "")
+						//MemorySlot lines should have 3 fields, slot number, optional name, value
+						// if the value is blank, then don't store it.  
+						if (parts.length == 3 && parts[2] != '')
 						{
-							var slot = {
-								'itemType' : 'memoryslot',
-								'number' : parts[0],
-								'name' : parts[1],
-								'value' : parts[2]
+							var slot = null
+							if (parts[1] == '') 
+							{ // no name
+								slot = {
+									'itemType' : 'memoryslot',
+									'number' : parts[0],
+									'value' : parts[2]
 								}
-								debug(slot);
-							state.update(
-								{'itemType' : 'memoryslot',
-								'number' : parts[0]
-								},
-								slot,
-									{'upsert' : true}
-								)
-							self.emit('memorySlot', slot)
+							} else  {
+								// only has a number
+								slot = {
+									'itemType' : 'memoryslot',
+									'number' : parts[0],
+									'name' : parts[1],
+									'value' : parts[2]
+								}
+							}
+							
+							if (slot != null)
+							{
+								debug('memoryslot',slot);
+								state.update(
+									{'itemType' : 'memoryslot',
+									'number' : parts[0]
+									},
+									slot,
+										{'upsert' : true}
+									)
+								self.emit('memorySlot', slot)
+							} else {
+								debug("slot error",line)
+							}	
 						}
+						
 					});
-					resync(state, client)
 					return
 				}
 				if (firstLine.indexOf("RouteStat") >= 0)
 				{
-					debug('routestat')
+					debug('routestat',firstLine)
 					lines.forEach(function (line)
 					{
 						if (line.indexOf(">>") == 0)
@@ -325,13 +366,12 @@ PFInt.prototype.parseLines = function (self, lines)
 							self.emit('memorySlot', slot)
 						}
 					});
-					resync(state, client)
 					return					
 				}
 				
 				if (firstLine.indexOf("GPIStat") >= 0)
 				{
-					debug('gpistat')
+					debug('gpistat',firstLine)
 					lines.push(firstLine)
 					lines.forEach( function (line) {
 						if (line.indexOf(">>") == 0)
@@ -357,15 +397,13 @@ PFInt.prototype.parseLines = function (self, lines)
 							}, { $set : gpi }, {'upsert' : true});
 						self.emit('gpi', gpi)
 					});
-					resync(state, client)
 				}
 				
 				if (firstLine.indexOf("Subscribed") >= 0)
 				{
-					debug('subscribed')
-					subscribed = true
+					debug('subscribed',firstLine)
+					self.subscribed = true
 					self.emit('subscribed', firstLine)
-					resync(state, client)
 				}
 				
 				if (firstLine.indexOf("BeginList") >= 0)
@@ -397,7 +435,6 @@ PFInt.prototype.parseList = function parseList(firstLine, lines, state, client)
 		
 		if (line.indexOf("EndList") ==0)
 		{
-			resync(state, client)
 			return
 		}
 		parts = line.split("\t")
@@ -517,35 +554,14 @@ function parseRoute(routerId, route, state)
 	return route
 }
 /*  This gets run every now and then, to keep us in sync with Pathfinder. */
-function resync(state, connection)
+function sendCommands(state, connection)
 {
 	nextCommand = commandQueue.shift()
-	if (nextCommand)
+	
+	while (nextCommand)
 	{
+		debug("sending command",nextCommand)
 		connection.write(nextCommand  + "\r\n")
-	} else {/*
-		// requery all routers
-		routers = state.find({'itemType' : 'router'}, 
-			function (err, routers) {
-			// queue up GPIO stat and RouteStat for all the routers
-			routers.forEach(function(router) {
-				// should probably only do this for GPIO routers
-				if(router['type'] == "AxiaGPIO")
-				{
-					commandQueue.push("GPIStat " + router['id']);
-					commandQueue.push("GPOStat " + router['id']);
-				}
-				commandQueue.push("GetList RouteStats " + router['id']);
-				
-			})
-			
-		});
-		if (!subscribed)
-		{
-			commandQueue.push("GetMemorySlot All")
-		}
-		commandQueue.push("GetList ProtocolTranslators")
-		*/
-		setTimeout(function() {resync(state, connection)}, 2500)
-	}
+		nextCommand = commandQueue.shift()
+	} 
 }
