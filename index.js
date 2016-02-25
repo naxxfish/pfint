@@ -18,7 +18,19 @@
  
 // basic imports
 var events = require('events');
-var debug = require('debug')('pathfinder-pfinterface')
+var debug = require('debug')('pfint')
+
+if (!String.prototype.endsWith) {
+  String.prototype.endsWith = function(searchString, position) {
+      var subjectString = this.toString();
+      if (typeof position !== 'number' || !isFinite(position) || Math.floor(position) !== position || position > subjectString.length) {
+        position = subjectString.length;
+      }
+      position -= searchString.length;
+      var lastIndex = subjectString.indexOf(searchString, position);
+      return lastIndex !== -1 && lastIndex === position;
+  };
+}
 
 
 module.exports = PFInt;
@@ -70,6 +82,7 @@ PFInt.prototype.setMemorySlot = function setMemorySlot(memorySlot, memorySlotVal
 	if (memorySlot === undefined || memorySlot === null || memorySlotValue === undefined || memorySlotValue === null)
 	{
 		cb('passed undefined',{'error':'memorySlot or memorySlotValue not defined'});
+		return;
 	}
 	if (self.connected)
 	{
@@ -121,8 +134,18 @@ PFInt.prototype.sync = function sync(config)
 						{'itemType' : 'pathfinderserver'},
 						{ $set : {'connected' : true} }, {'upsert' : true }
 			)
+			var readBuffer = "";
 			self.client.on('data', function(data) {
-				lines = data.toString().split("\r\n")
+				debug("From PF",data.toString())
+				readBuffer = readBuffer + data.toString();
+				debug("readBuffer",readBuffer);
+				// if the message does not end with a \r\n>>, then there will be a continuation so wait for that.
+				if (!readBuffer.endsWith("\r\n>>"))
+				{
+					return;
+				}
+				lines = readBuffer.split("\r\n")
+				readBuffer = "";
 				lines.forEach(function (line) {
 					
 					if (line.indexOf(">>") == 0)
@@ -168,12 +191,12 @@ PFInt.prototype.parseLines = function (self, lines)
 				config = self.config
 				client = self.client
 				firstLine = lines.shift()
+				
 				if (firstLine == ">>")
 				{
 					firstLine = lines.shift()
 				}
-				// console.log("## PF: " + data.toString())
-				debug({'rawPFIntLine':firstLine});
+				
 				if (firstLine.indexOf("Login") >= 0)
 				{
 					if (firstLine.indexOf("Successful") > 0)
