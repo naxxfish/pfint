@@ -10,7 +10,8 @@
   "homepage": "http://github.com/naxxfish/pfint",
   "main": "index.js",
   "dependencies": {
-    "nedb": "~0.10.4"
+    "nedb": "~0.10.4",
+	"debug": "*"
   },
   "devDependencies": {
     "mocha": "^2.4.5",
