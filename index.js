@@ -67,8 +67,13 @@ PFInt.prototype.findOne = function find(query, cb)
 PFInt.prototype.setMemorySlot = function setMemorySlot(memorySlot, memorySlotValue, cb)
 {
 	var self = this;
+	if (memorySlot === undefined || memorySlot === null || memorySlotValue === undefined || memorySlotValue === null)
+	{
+		cb('passed undefined',{'error':'memorySlot or memorySlotValue not defined'});
+	}
 	if (self.connected)
 	{
+		// check that the memoryslot value given is actually defined... 
 		debug({'action':'set','memorySlot':memorySlot,'memorySlotValue':memorySlotValue})
 		debug("SetMemorySlot " + memorySlot + "=" + memorySlotValue + "\r\n");
 		self.client.write("SetMemorySlot " + memorySlot + "=" + memorySlotValue + "\r\n");
@@ -105,9 +110,10 @@ PFInt.prototype.sync = function sync(config)
 			'port' : config['port']
 			} }, {'upsert' : true }
 	)
-	self.connected = true;
+
 	self.client = net.connect({host: config['host'], port: config['port']},
 		function() { //'connect' listener
+			self.connected = true;
 			debug('Connected')
 			self.emit('connected')
 			self.client.write("Login " + config['user'] + " " + config['password'] + "\r\n");
