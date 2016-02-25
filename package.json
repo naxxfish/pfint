@@ -5,7 +5,7 @@
     "email": "chris@naxxfish.eu",
     "url": "http://naxxfish.eu/"
   },
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "A module which allows Node.js to interface with PathfinderPC Server (www.pathfinderpc.com)",
   "homepage": "http://github.com/naxxfish/pfint",
   "main": "index.js",
