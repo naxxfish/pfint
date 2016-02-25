@@ -78,6 +78,7 @@ PFInt.prototype.findOne = function find(query, cb)
 
 PFInt.prototype.setMemorySlot = function setMemorySlot(memorySlot, memorySlotValue, cb)
 {
+	debug('setMemorySlot',memorySlot,memorySlotValue)
 	var self = this
 	if (memorySlot === undefined || memorySlot === null || memorySlotValue === undefined || memorySlotValue === null)
 	{
@@ -108,10 +109,11 @@ PFInt.prototype.setMemorySlot = function setMemorySlot(memorySlot, memorySlotVal
 		*/
 		var updateEvent = function (slot) 
 		{
+			debug(slot)
 			if (slot.name == memorySlot)
 			{
 				self.removeListener('memorySlot',updateEvent)
-				self.findOne({'itemType' : 'memoryslot','name':memorySlot},cb)
+				cb(slot)
 			}
 		}
 		self.on('memorySlot',updateEvent)
@@ -145,10 +147,13 @@ PFInt.prototype.sync = function sync(config)
 			commandQueue.push("GetMemorySlot All")
 			commandQueue.push("GetList Routers")
 			sendCommands(state,self.client)
-			setTimeout(function() { sendCommands(state,self.client) },1000) // in case the results of all the above commands create more commands to execute
-			self.connected = true
-			debug('Connected')
-			self.emit('connected')
+			setTimeout(function() { 
+				sendCommands(state,self.client) 
+				debug('Connected')
+				self.connected = true
+				self.emit('connected')
+			},1000) // in case the results of all the above commands create more commands to execute
+
 			state.update(
 						{'itemType' : 'pathfinderserver'},
 						{ $set : {'connected' : true} }, {'upsert' : true }
@@ -323,8 +328,9 @@ PFInt.prototype.parseLines = function (self, lines)
 									},
 									slot,
 										{'upsert' : true}
-									)
-								self.emit('memorySlot', slot)
+									,function (err) {
+										self.emit('memorySlot', slot)
+									})
 							} else {
 								debug("slot error",line)
 							}	
@@ -363,7 +369,7 @@ PFInt.prototype.parseLines = function (self, lines)
 								slot,
 									{'upsert' : true}
 								)
-							self.emit('memorySlot', slot)
+							//self.emit('memorySlot', slot)
 						}
 					});
 					return					
@@ -467,9 +473,12 @@ PFInt.prototype.parseList = function parseList(firstLine, lines, state, client)
 					'destinationid' : entry['destinationid']
 				},  
 				{$set : entry}, 
-				{'upsert' : true }
+				{'upsert' : true },
+				function() {
+					self.emit('route', entry)
+				}
 			)
-			self.emit('route', entry)
+			
 		} else if (list.indexOf("protocoltranslators") == 0)
 		{
 			entry = parseProtocolTranslator(entry)
@@ -479,8 +488,10 @@ PFInt.prototype.parseList = function parseList(firstLine, lines, state, client)
 					'id' : entry['id']
 				}, 
 				{$set : entry}, 
-				{'upsert' : true})
-			self.emit('protocoltranslator', entry)
+				{'upsert' : true}, function(){
+					self.emit('protocoltranslator', entry)		
+				})
+			
 		}
 	})
 	
