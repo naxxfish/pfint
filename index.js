@@ -171,7 +171,7 @@ PFInt.prototype.sync = function sync(config)
 				lines = readBuffer.split("\r\n")
 				readBuffer = "";
 				lines.forEach(function (line) {
-					
+					debug('raw_line',line)
 					if (line.indexOf(">>") == 0)
 					{
 						self.parseLines(self,linesToParse)
