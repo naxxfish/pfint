@@ -5,13 +5,13 @@
     "email": "chris@naxxfish.eu",
     "url": "http://naxxfish.eu/"
   },
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "A module which allows Node.js to interface with PathfinderPC Server (www.pathfinderpc.com)",
   "homepage": "http://github.com/naxxfish/pfint",
   "main": "index.js",
   "dependencies": {
     "nedb": "~0.10.4",
-	"debug": "*"
+    "debug": "*"
   },
   "devDependencies": {
     "mocha": "^2.4.5",
